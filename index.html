@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Apt 105 Cleaning Tracker</title>
+    <style>
+        :root {
+            --bg-color: #f0f2f5;
+            --card-bg: #ffffff;
+            --text-color: #2d3748;
+            --border-color: #e2e8f0;
+            --kitchen-main: #3182ce;
+            --kitchen-bg: #ebf8ff;
+            --bathroom-main: #38a169;
+            --bathroom-bg: #f0fff4;
+            --living-main: #dd6b20;
+            --living-bg: #fffaf0;
+            --bedroom-main: #805ad5;
+            --bedroom-bg: #faf5ff;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg-color: #121620;
+                --card-bg: #1a202c;
+                --text-color: #edf2f7;
+                --border-color: #2d3748;
+                --kitchen-main: #63b3ed;
+                --kitchen-bg: #1c2d42;
+                --bathroom-main: #68d391;
+                --bathroom-bg: #173729;
+                --living-main: #f6ad55;
+                --living-bg: #4a2b10;
+                --bedroom-main: #b794f4;
+                --bedroom-bg: #2d1f4d;
+            }
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+        }
+
+        header {
+            max-width: 1200px;
+            margin: 0 auto 25px auto;
+            padding: 20px;
+            background: var(--card-bg);
+            border-radius: 14px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.04);
+            border: 1px solid var(--border-color);
+            text-align: center;
+        }
+
+        h1 { margin: 0 0 5px 0; font-size: 1.6rem; }
+
+        .source-reference {
+            display: inline-block;
+            font-size: 0.8rem;
+            color: #718096;
+            margin-bottom: 15px;
+            text-decoration: none;
+            background: var(--bg-color);
+            padding: 6px 12px;
+            border-radius: 20px;
+            border: 1px solid var(--border-color);
+        }
+
+        .controls button {
+            padding: 10px 20px;
+            border: 1px solid var(--border-color);
+            border-radius: 24px;
+            background: var(--card-bg);
+            color: var(--text-color);
+            cursor: pointer;
+            font-weight: 600;
+            margin: 0 5px;
+            transition: all 0.2s;
+        }
+
+        .controls button.active {
+            background: #3182ce;
+            color: white;
+            border-color: #3182ce;
+        }
+
+        .stats-summary { font-weight: bold; margin-top: 10px; font-size: 1rem; }
+
+        .progress-bar {
+            background: var(--border-color);
+            border-radius: 10px;
+            height: 10px;
+            max-width: 500px;
+            margin: 12px auto 0 auto;
+            overflow: hidden;
+        }
+
+        .progress-fill { background: #48bb78; height: 100%; width: 0%; transition: width 0.3s; }
+
+        .board-grid {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(250px, 1fr));
+            gap: 20px;
+            max-width: 1400px;
+            margin: 0 auto;
+            align-items: start;
+        }
+
+        @media (max-width: 1100px) {
+            .board-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+        @media (max-width: 650px) {
+            .board-grid { grid-template-columns: 1fr; }
+        }
+
+        .room-column {
+            border-radius: 14px;
+            padding: 15px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.02);
+            border-top: 5px solid var(--border-color);
+            height: auto;
+        }
+
+        .col-kitchen { background-color: var(--kitchen-bg); border-top-color: var(--kitchen-main); }
+        .col-bathroom { background-color: var(--bathroom-bg); border-top-color: var(--bathroom-main); }
+        .col-living { background-color: var(--living-bg); border-top-color: var(--living-main); }
+        .col-bedroom { background-color: var(--bedroom-bg); border-top-color: var(--bedroom-main); }
+
+        .column-title {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 1.2rem;
+            font-weight: bold;
+            margin-bottom: 15px;
+            padding-bottom: 5px;
+            border-bottom: 2px solid rgba(0,0,0,0.05);
+        }
+
+        .task-card-section {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 12px 14px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.01);
+            transition: transform 0.15s, box-shadow 0.15s;
+        }
+
+        .task-card-section:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+        }
+
+        .task-card-section input[type="checkbox"] {
+            margin-top: 3px;
+            width: 18px;
+            height: 18px;
+            flex-shrink: 0;
+            cursor: pointer;
+        }
+
+        .task-content { flex: 1; min-width: 0; }
+
+        .task-card-text { font-size: 0.92rem; line-height: 1.4; font-weight: 500; }
+
+        /* Per-task note field */
+        .task-note {
+            display: block;
+            width: 100%;
+            box-sizing: border-box;
+            margin-top: 8px;
+            padding: 6px 8px;
+            font-family: inherit;
+            font-size: 0.82rem;
+            line-height: 1.35;
+            color: var(--text-color);
+            background: var(--bg-color);
+            border: 1px solid var(--border-color);
+            border-radius: 7px;
+            resize: none;
+            overflow: hidden;
+            cursor: text;
+            transition: border-color 0.15s, box-shadow 0.15s;
+        }
+
+        .task-note::placeholder { color: #a0aec0; }
+
+        .task-note:focus {
+            outline: none;
+            border-color: #3182ce;
+            box-shadow: 0 0 0 2px rgba(49,130,206,0.15);
+        }
+
+        .task-note.has-note { border-style: solid; border-color: #cbd5e0; }
+
+        .task-card-section.completed {
+            border-color: transparent;
+            background: rgba(255, 255, 255, 0.4);
+            box-shadow: none;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            .task-card-section.completed { background: rgba(0, 0, 0, 0.2); }
+        }
+
+        .completed .task-card-text {
+            text-decoration: line-through;
+            opacity: 0.4;
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>Apt 105 Cleaning Tracker</h1>
+    <a class="source-reference" href="https://docs.google.com/spreadsheets/d/1XFhbn5IjhpFFj9zu_WUr_D_Iu3NUiMANiDf4VJ1zQr8/edit#gid=0" target="_blank">
+        📊 Source: Jessicas Cleaning List 3928 Kansas 105 ↗
+    </a>
+    <div class="controls">
+        <button id="btn-regular" class="active" onclick="setMode('regular')">Regular Clean</button>
+        <button id="btn-deep" onclick="setMode('deep')">6-Month Deep Clean</button>
+    </div>
+    <div id="stats" class="stats-summary">Grand Total Completed: 0 / 0</div>
+    <div class="progress-bar"><div id="progress" class="progress-fill"></div></div>
+</header>
+
+<div id="board" class="board-grid"></div>
+
+<script>
+    const tasks = [
+        { room: 'Kitchen', text: 'High-dust walls and ceilings (Prior to Cleaning)', isDeep: true },
+        { room: 'Kitchen', text: 'Clean ceiling fan blades', isDeep: true },
+        { room: 'Kitchen', text: 'Clean doorknobs/light switches/electrical plates', isDeep: false },
+        { room: 'Kitchen', text: 'Clean and wipe counters and bar top', isDeep: false },
+        { room: 'Kitchen', text: 'Streak-free wipe and polish stainless steel water filter exterior', isDeep: false },
+        { room: 'Kitchen', text: 'Wipe dishwasher exterior', isDeep: false },
+        { room: 'Kitchen', text: 'Sanitize sink', isDeep: false },
+        { room: 'Kitchen', text: 'Clean stove — cooktop, drip pans, and under lip', isDeep: false },
+        { room: 'Kitchen', text: 'Clean inside of oven', isDeep: true },
+        { room: 'Kitchen', text: 'Clean outside of oven', isDeep: false },
+        { room: 'Kitchen', text: 'Clean outside of fridge (pull fridge out)', isDeep: false },
+        { room: 'Kitchen', text: 'Clean inside of microwave', isDeep: false },
+        { room: 'Kitchen', text: 'Clean outside of microwave', isDeep: false },
+        { room: 'Kitchen', text: 'Clean window frame, track, and glass (both sides)', isDeep: true },
+        { room: 'Kitchen', text: 'Clean window blinds', isDeep: false },
+        { room: 'Kitchen', text: 'Dust curtains and wipe down curtain tracks', isDeep: false },
+        { room: 'Kitchen', text: 'Clean sliding door frame, track, and glass (both sides)', isDeep: true },
+        { room: 'Kitchen', text: 'Clean ceiling fluorescent light', isDeep: false },
+        { room: 'Kitchen', text: 'Wipe cabinet doors fronts/backs', isDeep: false },
+        { room: 'Kitchen', text: 'Wipe kitchen cabinet kick-plates', isDeep: true },
+        { room: 'Kitchen', text: 'Wipe down baseboards', isDeep: true },
+        { room: 'Kitchen', text: 'Wipe down high-top table', isDeep: false },
+        { room: 'Kitchen', text: 'Wipe down bar stools (rungs and bases)', isDeep: false },
+        { room: 'Kitchen', text: 'Wipe vents', isDeep: true },
+        { room: 'Kitchen', text: 'Sweep floors (move fridge under)', isDeep: false },
+        { room: 'Kitchen', text: 'Mop floors (move fridge under)', isDeep: false },
+
+        { room: 'Bathroom', text: 'Scrub tub', isDeep: false },
+        { room: 'Bathroom', text: 'Clean doorknobs/light switches/plates', isDeep: false },
+        { room: 'Bathroom', text: 'Disinfect toilet', isDeep: false },
+        { room: 'Bathroom', text: 'Disinfect sink', isDeep: false },
+        { room: 'Bathroom', text: 'Wipe mirror', isDeep: false },
+        { room: 'Bathroom', text: 'Wipe fixtures', isDeep: false },
+        { room: 'Bathroom', text: 'Clean vanity surface and cabinet doors', isDeep: false },
+        { room: 'Bathroom', text: 'Wipe down baseboards', isDeep: true },
+        { room: 'Bathroom', text: 'Sweep floor', isDeep: false },
+        { room: 'Bathroom', text: 'Mop floor', isDeep: false },
+
+        { room: 'Living Room', text: 'High-dust walls and ceilings (Prior to Cleaning)', isDeep: true },
+        { room: 'Living Room', text: 'Clean doorknobs/light switches/plates', isDeep: false },
+        { room: 'Living Room', text: 'Clear and dust end table (legs and base)', isDeep: false },
+        { room: 'Living Room', text: 'Dust shoe rack and wipe chair (frame and legs)', isDeep: false },
+        { room: 'Living Room', text: 'Dust bookshelf (exterior and edges)', isDeep: false },
+        { room: 'Living Room', text: 'Dust furniture (check legs on sliding units)', isDeep: false },
+        { room: 'Living Room', text: 'Clean light fixtures', isDeep: false },
+        { room: 'Living Room', text: 'Clean window blinds', isDeep: false },
+        { room: 'Living Room', text: 'Clean window frame, track, and glass (both sides)', isDeep: true },
+        { room: 'Living Room', text: 'Wipe down baseboards', isDeep: true },
+        { room: 'Living Room', text: 'Wipe vents', isDeep: true },
+        { room: 'Living Room', text: 'Wipe down TV', isDeep: false },
+        { room: 'Living Room', text: 'Wipe front door (both sides), frame, and top ledge', isDeep: false },
+        { room: 'Living Room', text: 'Dust curtains and wipe down curtain tracks', isDeep: false },
+
+        { room: 'Bedroom', text: 'Clean doorknobs/light switches/plates', isDeep: false },
+        { room: 'Bedroom', text: 'Dust furniture (nightstands, bed frame legs/base)', isDeep: false },
+        { room: 'Bedroom', text: 'Dust standing light (3 plastic shade housings)', isDeep: false },
+        { room: 'Bedroom', text: 'Wipe mirrors', isDeep: false },
+        { room: 'Bedroom', text: 'Clean window frame, track, and glass (both sides)', isDeep: true },
+        { room: 'Bedroom', text: 'Dust curtains and wipe down curtain tracks', isDeep: false },
+        { room: 'Bedroom', text: 'Wipe down door', isDeep: true },
+        { room: 'Bedroom', text: 'Wipe vents', isDeep: true },
+        { room: 'Bedroom', text: 'Wipe down baseboards', isDeep: true }
+    ];
+
+    let currentMode = 'regular';
+
+    function autoGrow(el) {
+        el.style.height = 'auto';
+        el.style.height = el.scrollHeight + 'px';
+    }
+
+    function renderBoard() {
+        const board = document.getElementById('board');
+        board.innerHTML = '';
+
+        const roomKeys = ['Kitchen', 'Bathroom', 'Living Room', 'Bedroom'];
+        const pendingNotes = [];
+
+        roomKeys.forEach(room => {
+            const filteredTasks = tasks.filter(t => t.room === room && (currentMode === 'deep' || !t.isDeep));
+            const completedCount = filteredTasks.filter(t => t.done).length;
+            const totalCount = filteredTasks.length;
+
+            if (totalCount === 0) return;
+
+            const column = document.createElement('div');
+            const classSlug = room.toLowerCase().split(' ')[0];
+            column.className = `room-column col-${classSlug}`;
+
+            const title = document.createElement('div');
+            title.className = 'column-title';
+            title.innerHTML = `<span></span><span style="font-size:0.85rem; opacity:0.8;">${completedCount}/${totalCount}</span>`;
+            title.firstChild.textContent = room;
+            column.appendChild(title);
+
+            filteredTasks.forEach(task => {
+                const globalIndex = tasks.indexOf(task);
+
+                const card = document.createElement('div');
+                card.className = `task-card-section ${task.done ? 'completed' : ''}`;
+                card.onclick = () => toggleTask(globalIndex);
+
+                const cb = document.createElement('input');
+                cb.type = 'checkbox';
+                cb.checked = !!task.done;
+                cb.onclick = (e) => e.stopPropagation();
+                cb.onchange = (e) => { e.stopPropagation(); toggleTask(globalIndex); };
+
+                const content = document.createElement('div');
+                content.className = 'task-content';
+
+                const textDiv = document.createElement('div');
+                textDiv.className = 'task-card-text';
+                textDiv.textContent = task.text;
+
+                const note = document.createElement('textarea');
+                note.className = 'task-note' + (task.note ? ' has-note' : '');
+                note.rows = 1;
+                note.placeholder = 'Add a note…';
+                note.value = task.note || '';
+                note.onclick = (e) => e.stopPropagation();
+                note.oninput = function () {
+                    tasks[globalIndex].note = this.value;
+                    this.classList.toggle('has-note', this.value.trim().length > 0);
+                    autoGrow(this);
+                };
+
+                content.appendChild(textDiv);
+                content.appendChild(note);
+                card.appendChild(cb);
+                card.appendChild(content);
+                column.appendChild(card);
+
+                pendingNotes.push(note);
+            });
+
+            board.appendChild(column);
+        });
+
+        // Size note boxes once they're in the DOM so scrollHeight is correct
+        pendingNotes.forEach(autoGrow);
+
+        updateMasterProgress();
+    }
+
+    function toggleTask(index) {
+        tasks[index].done = !tasks[index].done;
+        renderBoard();
+    }
+
+    function setMode(mode) {
+        currentMode = mode;
+        document.getElementById('btn-regular').className = mode === 'regular' ? 'active' : '';
+        document.getElementById('btn-deep').className = mode === 'deep' ? 'active' : '';
+        renderBoard();
+    }
+
+    function updateMasterProgress() {
+        const activeTasks = tasks.filter(t => currentMode === 'deep' || !t.isDeep);
+        const completed = activeTasks.filter(t => t.done).length;
+        const total = activeTasks.length;
+
+        document.getElementById('stats').innerText = `Grand Total Completed: ${completed} / ${total}`;
+        const percentage = total > 0 ? (completed / total) * 100 : 0;
+        document.getElementById('progress').style.width = `${percentage}%`;
+    }
+
+    renderBoard();
+</script>
+
+</body>
+</html>
