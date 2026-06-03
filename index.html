@@ -244,4 +244,153 @@
         { room: 'Kitchen', text: 'Dust curtains and wipe down curtain tracks', isDeep: false },
         { room: 'Kitchen', text: 'Clean sliding door frame, track, and glass (both sides)', isDeep: true },
         { room: 'Kitchen', text: 'Clean ceiling fluorescent light', isDeep: false },
-        { room: 'Kitchen', text
+        { room: 'Kitchen', text: 'Wipe cabinet doors fronts/backs', isDeep: false },
+        { room: 'Kitchen', text: 'Wipe kitchen cabinet kick-plates', isDeep: true },
+        { room: 'Kitchen', text: 'Wipe down baseboards', isDeep: true },
+        { room: 'Kitchen', text: 'Wipe down high-top table', isDeep: false },
+        { room: 'Kitchen', text: 'Wipe down bar stools (rungs and bases)', isDeep: false },
+        { room: 'Kitchen', text: 'Wipe vents', isDeep: true },
+        { room: 'Kitchen', text: 'Sweep floors (move fridge under)', isDeep: false },
+        { room: 'Kitchen', text: 'Mop floors (move fridge under)', isDeep: false },
+
+        // BATHROOM
+        { room: 'Bathroom', text: 'Scrub tub', isDeep: false },
+        { room: 'Bathroom', text: 'Clean doorknobs/light switches/plates', isDeep: false },
+        { room: 'Bathroom', text: 'Disinfect toilet', isDeep: false },
+        { room: 'Bathroom', text: 'Disinfect sink', isDeep: false },
+        { room: 'Bathroom', text: 'Wipe mirror', isDeep: false },
+        { room: 'Bathroom', text: 'Wipe fixtures', isDeep: false },
+        { room: 'Bathroom', text: 'Clean vanity surface and cabinet doors', isDeep: false },
+        { room: 'Bathroom', text: 'Wipe down baseboards', isDeep: true },
+        { room: 'Bathroom', text: 'Sweep floor', isDeep: false },
+        { room: 'Bathroom', text: 'Mop floor', isDeep: false },
+
+        // LIVING ROOM
+        { room: 'Living Room', text: 'High-dust walls and ceilings (Prior to Cleaning)', isDeep: true },
+        { room: 'Living Room', text: 'Clean doorknobs/light switches/plates', isDeep: false },
+        { room: 'Living Room', text: 'Clear and dust end table (legs and base)', isDeep: false },
+        { room: 'Living Room', text: 'Dust shoe rack and wipe chair (frame and legs)', isDeep: false },
+        { room: 'Living Room', text: 'Dust bookshelf (exterior and edges)', isDeep: false },
+        { room: 'Living Room', text: 'Dust furniture (check legs on sliding units)', isDeep: false },
+        { room: 'Living Room', text: 'Clean light fixtures', isDeep: false },
+        { room: 'Living Room', text: 'Clean window blinds', isDeep: false },
+        { room: 'Living Room', text: 'Clean window frame, track, and glass (both sides)', isDeep: true },
+        { room: 'Living Room', text: 'Wipe down baseboards', isDeep: true },
+        { room: 'Living Room', text: 'Wipe vents', isDeep: true },
+        { room: 'Living Room', text: 'Wipe down TV', isDeep: false },
+        { room: 'Living Room', text: 'Wipe front door (both sides), frame, and top ledge', isDeep: false },
+        { room: 'Living Room', text: 'Dust curtains and wipe down curtain tracks', isDeep: false },
+
+        // BEDROOM
+        { room: 'Bedroom', text: 'Clean doorknobs/light switches/plates', isDeep: false },
+        { room: 'Bedroom', text: 'Dust furniture (nightstands, bed frame legs/base)', isDeep: false },
+        { room: 'Bedroom', text: 'Dust standing light (3 plastic shade housings)', isDeep: false },
+        { room: 'Bedroom', text: 'Wipe mirrors', isDeep: false },
+        { room: 'Bedroom', text: 'Clean window frame, track, and glass (both sides)', isDeep: true },
+        { room: 'Bedroom', text: 'Dust curtains and wipe down curtain tracks', isDeep: false },
+        { room: 'Bedroom', text: 'Wipe down door', isDeep: true },
+        { room: 'Bedroom', text: 'Wipe vents', isDeep: true },
+        { room: 'Bedroom', text: 'Wipe down baseboards', isDeep: true }
+    ];
+
+    let tasks = [];
+    let currentMode = 'regular';
+
+    // 1. Storage Loader Strategy: Load existing save state OR pull fresh array defaults
+    function loadChecklistData() {
+        const localSave = localStorage.getItem('apt105_cleaning_save');
+        if (localSave) {
+            tasks = JSON.parse(localSave);
+        } else {
+            // Standard object copy setup to prevent array matching leaks
+            tasks = defaultTasks.map(t => ({ ...t, done: false }));
+        }
+    }
+
+    // 2. Storage Writer Strategy: Lock checkbox changes straight to internal device memory
+    function saveChecklistData() {
+        localStorage.setItem('apt105_cleaning_save', JSON.stringify(tasks));
+    }
+
+    function renderBoard() {
+        const board = document.getElementById('board');
+        board.innerHTML = '';
+
+        const roomKeys = ['Kitchen', 'Bathroom', 'Living Room', 'Bedroom'];
+
+        roomKeys.forEach(room => {
+            const filteredTasks = tasks.filter(t => t.room === room && (currentMode === 'deep' || !t.isDeep));
+            const completedCount = filteredTasks.filter(t => t.done).length;
+            const totalCount = filteredTasks.length;
+
+            if (totalCount === 0) return;
+
+            const column = document.createElement('div');
+            const classSlug = room.toLowerCase().split(' ')[0];
+            column.className = `room-column col-${classSlug}`;
+
+            column.innerHTML = `
+                <div class="column-title">
+                    <span>${room}</span>
+                    <span style="font-size:0.85rem; opacity:0.8;">${completedCount}/${totalCount}</span>
+                </div>
+            `;
+
+            filteredTasks.forEach(task => {
+                const globalIndex = tasks.indexOf(task);
+                const card = document.createElement('div');
+                card.className = `task-card-section ${task.done ? 'completed' : ''}`;
+                card.onclick = () => toggleTask(globalIndex);
+
+                card.innerHTML = `
+                    <input type="checkbox" ${task.done ? 'checked' : ''} onchange="event.stopPropagation(); toggleTask(${globalIndex});">
+                    <div class="task-card-text">${task.text}</div>
+                `;
+                column.appendChild(card);
+            });
+
+            board.appendChild(column);
+        });
+
+        updateMasterProgress();
+    }
+
+    function toggleTask(index) {
+        tasks[index].done = !tasks[index].done;
+        saveChecklistData(); // Save changes instantly when toggled
+        renderBoard();
+    }
+
+    // Reset Engine: Clears custom storage blocks and forces a clean reset UI array
+    function resetChecklist() {
+        if (confirm("Are you sure you want to clear your current progress and reset the entire checklist for a new session?")) {
+            localStorage.removeItem('apt105_cleaning_save');
+            tasks = defaultTasks.map(t => ({ ...t, done: false }));
+            renderBoard();
+        }
+    }
+
+    function setMode(mode) {
+        currentMode = mode;
+        document.getElementById('btn-regular').className = mode === 'regular' ? 'active' : '';
+        document.getElementById('btn-deep').className = mode === 'deep' ? 'active' : '';
+        renderBoard();
+    }
+
+    function updateMasterProgress() {
+        const activeTasks = tasks.filter(t => currentMode === 'deep' || !t.isDeep);
+        const completed = activeTasks.filter(t => t.done).length;
+        const total = activeTasks.length;
+        
+        document.getElementById('stats').innerText = `Grand Total Completed: ${completed} / ${total}`;
+        const percentage = total > 0 ? (completed / total) * 100 : 0;
+        document.getElementById('progress').style.width = `${percentage}%`;
+    }
+
+    // Runner Execution
+    loadChecklistData();
+    renderBoard();
+</script>
+
+</body>
+</html>
